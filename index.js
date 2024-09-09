@@ -1,121 +1,80 @@
-var doing = false;
-var spin = [new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3"),new Audio("res/sounds/spin.mp3")];
-var coin = [new Audio("res/sounds/coin.mp3"),new Audio("res/sounds/coin.mp3"),new Audio("res/sounds/coin.mp3")]
-var win = new Audio("res/sounds/win.mp3");
-var lose = new Audio("res/sounds/lose.mp3");
-var audio = false;
-let status = document.getElementById("status")
-var info = true;
+let doing = false;
+let audioEnabled = true;
 
-function doSlot(){
-	if (doing){return null;}
-	doing = true;
-	var numChanges = randomInt(1,4)*7
-	var numeberSlot1 = numChanges+randomInt(1,7)
-	var numeberSlot2 = numChanges+2*7+randomInt(1,7)
-	var numeberSlot3 = numChanges+4*7+randomInt(1,7)
+const spinSounds = Array(7).fill(new Audio('res/sounds/spin.mp3'));
+const coinSounds = Array(3).fill(new Audio('res/sounds/coin.mp3'));
+const winSound = new Audio('res/sounds/win.mp3');
+const loseSound = new Audio('res/sounds/lose.mp3');
 
-	var i1 = 0;
-	var i2 = 0;
-	var i3 = 0;
-	var sound = 0
-	status.innerHTML = "SPINNING"
-	slot1 = setInterval(spin1, 50);
-	slot2 = setInterval(spin2, 50);
-	slot3 = setInterval(spin3, 50);
-	function spin1(){
-		i1++;
-		if (i1>=numeberSlot1){
-			coin[0].play()
-			clearInterval(slot1);
-			return null;
-		}
-		slotTile = document.getElementById("slot1");
-		if (slotTile.className=="a7"){
-			slotTile.className = "a0";
-		}
-		slotTile.className = "a"+(parseInt(slotTile.className.substring(1))+1)
-	}
-	function spin2(){
-		i2++;
-		if (i2>=numeberSlot2){
-			coin[1].play()
-			clearInterval(slot2);
-			return null;
-		}
-		slotTile = document.getElementById("slot2");
-		if (slotTile.className=="a7"){
-			slotTile.className = "a0";
-		}
-		slotTile.className = "a"+(parseInt(slotTile.className.substring(1))+1)
-	}
-	function spin3(){
-		i3++;
-		if (i3>=numeberSlot3){
-			coin[2].play()
-			clearInterval(slot3);
-			testWin();
-			return null;
-		}
-		slotTile = document.getElementById("slot3");
-		if (slotTile.className=="a7"){
-			slotTile.className = "a0";
-		}
-		sound++;
-		if (sound==spin.length){
-			sound=0;
-		}
-		spin[sound].play();
-		slotTile.className = "a"+(parseInt(slotTile.className.substring(1))+1)
-	}
+const statusText = document.getElementById('status');
+const audioIcon = document.getElementById('audio');
+
+function startSpin() {
+    if (doing) return;
+    doing = true;
+    statusText.innerHTML = 'SPINNING...';
+
+    const stopPositions = [randomInt(1, 7), randomInt(1, 7), randomInt(1, 7)];
+    spinReels(stopPositions);
 }
 
-function testWin(){
-	var slot1 = document.getElementById("slot1").className
-	var slot2 = document.getElementById("slot2").className
-	var slot3 = document.getElementById("slot3").className
+function spinReels([slot1Pos, slot2Pos, slot3Pos]) {
+    const reels = [
+        { element: document.getElementById('slot1'), stopAt: slot1Pos, currentPos: 1, coin: coinSounds[0] },
+        { element: document.getElementById('slot2'), stopAt: slot2Pos, currentPos: 1, coin: coinSounds[1] },
+        { element: document.getElementById('slot3'), stopAt: slot3Pos, currentPos: 1, coin: coinSounds[2] }
+    ];
 
-	if (((slot1 == slot2 && slot2 == slot3) ||
-		(slot1 == slot2 && slot3 == "a7") ||
-		(slot1 == slot3 && slot2 == "a7") ||
-		(slot2 == slot3 && slot1 == "a7") ||
-		(slot1 == slot2 && slot1 == "a7") ||
-		(slot1 == slot3 && slot1 == "a7") ||
-		(slot2 == slot3 && slot2 == "a7") ) && !(slot1 == slot2 && slot2 == slot3 && slot1=="a7")){
-		status.innerHTML = "YOU WIN!";
-		win.play();
-	}else{
-		status.innerHTML = "YOU LOSE!"
-		lose.play();
-	}
-	doing = false;
+    reels.forEach((reel, index) => {
+        setTimeout(() => spinReel(reel), index * 300); // delay for each reel to simulate spinning
+    });
 }
 
-function toggleAudio(){
-	if (!audio){
-		audio = !audio;
-		for (var x of spin){
-			x.volume = 0.5;
-		}
-		for (var x of coin){
-			x.volume = 0.5;
-		}
-		win.volume = 1.0;
-		lose.volume = 1.0;
-	}else{
-		audio = !audio;
-		for (var x of spin){
-			x.volume = 0;
-		}
-		for (var x of coin){
-			x.volume = 0;
-		}
-		win.volume = 0;
-		lose.volume = 0;
-	}
-	document.getElementById("audio").src = "res/icons/audio"+(audio?"On":"Off")+".png";
+function spinReel(reel) {
+    const spinInterval = setInterval(() => {
+        reel.currentPos = (reel.currentPos % 7) + 1; // Loop between 1 and 7
+        reel.element.innerHTML = reel.currentPos;
+
+        if (audioEnabled) {
+            spinSounds[reel.currentPos % spinSounds.length].play();
+        }
+
+        if (reel.currentPos === reel.stopAt) {
+            clearInterval(spinInterval);
+            reel.coin.play();
+            checkWinCondition();
+        }
+    }, 100);
 }
 
-function randomInt(min, max){
-	return Math.floor((Math.random() * (max-min+1)) + min);
+function checkWinCondition() {
+    const slot1 = document.getElementById('slot1').innerHTML;
+    const slot2 = document.getElementById('slot2').innerHTML;
+    const slot3 = document.getElementById('slot3').innerHTML;
+
+    if (slot1 === slot2 && slot2 === slot3) {
+        statusText.innerHTML = 'YOU WIN!';
+        winSound.play();
+    } else {
+        statusText.innerHTML = 'YOU LOSE!';
+        loseSound.play();
+    }
+
+    doing = false;
+}
+
+function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    const volume = audioEnabled ? 1 : 0;
+
+    spinSounds.forEach(sound => (sound.volume = volume));
+    coinSounds.forEach(sound => (sound.volume = volume));
+    winSound.volume = volume;
+    loseSound.volume = volume;
+
+    audioIcon.src = `res/icons/audio${audioEnabled ? 'On' : 'Off'}.png`;
+}
+
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
